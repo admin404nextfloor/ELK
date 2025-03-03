@@ -1,4 +1,6 @@
-# ELK
+# ELK, PostgreSQL, Nginx, Zabbix, and Grafana
+
+
 Centralized Logging and Monitoring System with ELK, PostgreSQL, Nginx, Zabbix, and Grafana
 
 
