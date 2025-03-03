@@ -1,9 +1,4 @@
-# ELK, PostgreSQL, Nginx, Zabbix, and Grafana
-
-
-Centralized Logging and Monitoring System with ELK, PostgreSQL, Nginx, Zabbix, and Grafana
-
-
+# Centralized Logging and Monitoring System with ELK, PostgreSQL, Nginx, Zabbix, and Grafana
 
 
 This project sets up a comprehensive system for centralized logging and monitoring, built using the ELK stack (Elasticsearch, Logstash, Kibana), PostgreSQL, Nginx, Zabbix, and Grafana, all containerized with Docker on Ubuntu.
