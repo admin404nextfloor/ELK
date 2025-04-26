@@ -1,0 +1,136 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    elastic_version: "8.x"
+    postgres_version: "15"
+    zabbix_version: "6.5"
+  tasks:
+
+    - name: Установка зависимостей
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+        update_cache: yes
+
+    - name: Установка Elasticsearch
+      apt_repository:
+        repo: "deb https://artifacts.elastic.co/packages/{{ elastic_version }}/apt stable main"
+        state: present
+        filename: 'elastic'
+      register: elastic_repo_added
+
+    - name: Установка ELK компонентов
+      apt:
+        name:
+          - elasticsearch
+          - logstash
+          - kibana
+        state: present
+      when: elastic_repo_added is changed
+
+    - name: Включение и запуск Elasticsearch, Logstash и Kibana
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - elasticsearch
+        - logstash
+        - kibana
+
+    - name: Установка PostgreSQL
+      apt:
+        name: "postgresql-{{ postgres_version }}"
+        state: present
+
+    - name: Включение и запуск PostgreSQL
+      systemd:
+        name: postgresql
+        enabled: yes
+        state: started
+
+    - name: Установка Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Включение и запуск Nginx
+      systemd:
+        name: nginx
+        enabled: yes
+        state: started
+
+    - name: Установка репозитория Zabbix
+      apt_repository:
+        repo: "deb http://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu $(lsb_release -sc) main"
+        state: present
+        filename: 'zabbix'
+      register: zabbix_repo_added
+
+    - name: Установка сервера и веб-интерфейса Zabbix
+      apt:
+        name:
+          - zabbix-server-pgsql
+          - zabbix-frontend-php
+          - zabbix-apache-conf
+          - zabbix-sql-scripts
+          - zabbix-agent
+        state: present
+      when: zabbix_repo_added is changed
+
+    - name: Создание БД для Zabbix
+      become_user: postgres
+      postgresql_db:
+        name: zabbix
+        encoding: UTF8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        state: present
+
+    - name: Создание пользователя БД для Zabbix
+      become_user: postgres
+      postgresql_user:
+        name: zabbix
+        password: zabbix_pass
+        priv: "zabbix:ALL"
+
+    - name: Настройка Zabbix сервера для подключения к БД
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: '^#? DBPassword='
+        line: 'DBPassword=zabbix_pass'
+
+    - name: Включение и запуск Zabbix сервера и агента
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        state: started
+      loop:
+        - zabbix-server
+        - zabbix-agent
+
+    - name: Установка Grafana
+      apt_repository:
+        repo: "deb https://packages.grafana.com/oss/deb stable main"
+        state: present
+        filename: 'grafana'
+        key_url: "https://packages.grafana.com/gpg.key"
+      register: grafana_repo_added
+
+    - name: Установка пакета Grafana
+      apt:
+        name: grafana
+        state: present
+      when: grafana_repo_added is changed
+
+    - name: Включение и запуск Grafana
+      systemd:
+        name: grafana-server
+        enabled: yes
+        state: started
